@@ -1,0 +1,1031 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Futures Trading Journal — Leverage & Risk Trainer</title>
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --panel:#121a26;
+      --panel2:#0f1622;
+      --text:#e6edf3;
+      --muted:#93a4b8;
+      --line:#223147;
+      --good:#22c55e;
+      --bad:#ef4444;
+      --warn:#f59e0b;
+      --btn:#1f2a3d;
+      --btn2:#26344d;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background:var(--bg);
+      color:var(--text);
+    }
+    .container{max-width:1100px;margin:0 auto;padding:14px}
+    .header{
+      display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+      padding:12px;border:1px solid var(--line);border-radius:16px;
+      background:linear-gradient(180deg, var(--panel), var(--panel2));
+    }
+    .title{display:flex;flex-direction:column;gap:4px}
+    .title h1{margin:0;font-size:16px;letter-spacing:.2px}
+    .title p{margin:0;color:var(--muted);font-size:12px}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .card{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:12px}
+    .card h2{margin:0 0 8px 0;font-size:13px;color:var(--muted);letter-spacing:.2px}
+    .grid{display:grid;gap:10px}
+    .grid-2{grid-template-columns:repeat(2, minmax(0, 1fr))}
+    .grid-3{grid-template-columns:repeat(3, minmax(0, 1fr))}
+    @media (max-width: 720px){ .grid-2,.grid-3{grid-template-columns:1fr} }
+    label{font-size:11px;color:var(--muted);display:block;margin-bottom:6px}
+    input, select, textarea{
+      width:100%;background:#0c1320;border:1px solid var(--line);color:var(--text);
+      padding:10px;border-radius:12px;outline:none
+    }
+    textarea{min-height:110px;resize:vertical}
+    .btn{
+      background:var(--btn);border:1px solid var(--line);color:var(--text);
+      padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:600;font-size:12px
+    }
+    .btn:hover{background:var(--btn2)}
+    .btn.good{border-color:rgba(34,197,94,.4)}
+    .btn.bad{border-color:rgba(239,68,68,.4)}
+    .btn.warn{border-color:rgba(245,158,11,.4)}
+    .btn.sm{padding:8px 10px;font-size:11px}
+    .pills{display:flex;gap:8px;flex-wrap:wrap}
+    .pill{
+      padding:8px 10px;border-radius:999px;border:1px solid var(--line);
+      background:#0c1320;font-size:11px;color:var(--muted)
+    }
+    .pill b{color:var(--text)}
+    .table-wrap{overflow:auto;border-radius:16px;border:1px solid var(--line)}
+    table{width:100%;border-collapse:collapse}
+    th, td{
+      padding:10px;border-bottom:1px solid var(--line);text-align:left;font-size:12px;white-space:nowrap
+    }
+    th{color:var(--muted);font-weight:700;background:#0c1320}
+    .tr-good{color:var(--good)}
+    .tr-bad{color:var(--bad)}
+    .tr-pending{color:var(--warn)}
+    .muted{color:var(--muted)}
+    .kpi{display:flex;flex-direction:column;gap:2px}
+    .kpi .big{font-size:15px;font-weight:800}
+    .kpi .small{font-size:11px;color:var(--muted)}
+    .hr{height:1px;background:var(--line);margin:10px 0}
+    .mini-card{padding:10px;background:#0c1320;border:1px solid var(--line);border-radius:16px}
+    .toast{
+      position:fixed;left:14px;right:14px;bottom:14px;
+      max-width:1100px;margin:0 auto;
+      padding:10px 12px;border-radius:14px;border:1px solid var(--line);
+      background:rgba(12,19,32,.92);backdrop-filter: blur(6px);
+      display:none;align-items:center;justify-content:space-between;gap:10px;
+      font-size:12px;color:var(--muted)
+    }
+    .toast b{color:var(--text)}
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">
+        <h1>Futures Trading Journal — Leverage & Risk Trainer</h1>
+        <p>Real-time calc • Offline (IndexedDB) • Cloud sync (Firebase) • Export/Import JSON</p>
+      </div>
+
+      <div id="authArea" class="row"></div>
+    </div>
+
+    <div style="height:12px"></div>
+
+    <div class="card">
+      <h2>STATISTIK (otomatis)</h2>
+      <div id="statsPills" class="pills"></div>
+    </div>
+
+    <div style="height:12px"></div>
+
+    <div class="row">
+      <div class="card" style="flex:1;min-width:320px">
+        <h2 id="formTitle">SETUP TRADE</h2>
+
+        <div class="grid grid-3">
+          <div>
+            <label>Date & time</label>
+            <input id="datetimeLocal" type="datetime-local"/>
+          </div>
+          <div>
+            <label>Pair / asset</label>
+            <input id="pair" placeholder="BTCUSDT"/>
+          </div>
+          <div>
+            <label>Position</label>
+            <select id="side">
+              <option value="LONG">Long</option>
+              <option value="SHORT">Short</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-3" style="margin-top:10px">
+          <div>
+            <label>Entry price</label>
+            <input id="entry" placeholder="contoh: 97250"/>
+          </div>
+          <div>
+            <label>Margin (USDT)</label>
+            <input id="margin" placeholder="contoh: 10"/>
+          </div>
+          <div>
+            <label>Leverage (x)</label>
+            <input id="leverage" placeholder="contoh: 40"/>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="grid grid-2">
+          <div class="mini-card">
+            <h2>STOP LOSS (dual mode)</h2>
+
+            <div class="row" style="justify-content:space-between">
+              <div class="pill"><b>Gerak harga</b> <span id="slMovePct">-</span>%</div>
+              <div class="pill"><b>Dampak margin</b> <span id="slImpactPct">-</span>%</div>
+            </div>
+
+            <div class="grid grid-2" style="margin-top:10px">
+              <div>
+                <label>Mode</label>
+                <select id="slMode">
+                  <option value="PCT">Input %</option>
+                  <option value="PRICE">Input price</option>
+                </select>
+              </div>
+              <div>
+                <label id="slLabel">SL %</label>
+                <input id="slValue" placeholder="0.3"/>
+              </div>
+            </div>
+
+            <div class="grid grid-2" style="margin-top:10px">
+              <div class="kpi">
+                <div class="small muted">SL price (auto)</div>
+                <div class="big" id="slPriceAuto">-</div>
+              </div>
+              <div class="kpi">
+                <div class="small muted">Estimasi PnL (USDT)</div>
+                <div class="big tr-bad" id="slPnlAuto">-</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mini-card">
+            <h2>TAKE PROFIT (dual mode)</h2>
+
+            <div class="row" style="justify-content:space-between">
+              <div class="pill"><b>Gerak harga</b> <span id="tpMovePct">-</span>%</div>
+              <div class="pill"><b>Dampak margin</b> <span id="tpImpactPct">-</span>%</div>
+            </div>
+
+            <div class="grid grid-2" style="margin-top:10px">
+              <div>
+                <label>Mode</label>
+                <select id="tpMode">
+                  <option value="PCT">Input %</option>
+                  <option value="PRICE">Input price</option>
+                </select>
+              </div>
+              <div>
+                <label id="tpLabel">TP %</label>
+                <input id="tpValue" placeholder="1.2"/>
+              </div>
+            </div>
+
+            <div class="grid grid-2" style="margin-top:10px">
+              <div class="kpi">
+                <div class="small muted">TP price (auto)</div>
+                <div class="big" id="tpPriceAuto">-</div>
+              </div>
+              <div class="kpi">
+                <div class="small muted">Estimasi PnL (USDT)</div>
+                <div class="big tr-good" id="tpPnlAuto">-</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="grid grid-2">
+          <div class="kpi">
+            <div class="small muted">Position size = margin × leverage</div>
+            <div class="big" id="posSizeAuto">-</div>
+          </div>
+          <div class="kpi">
+            <div class="small muted">Catatan: impact margin = price_move_% × leverage</div>
+            <div class="small muted" id="impactLine">-</div>
+          </div>
+        </div>
+
+        <div style="height:10px"></div>
+
+        <div>
+          <label>Reason / Journal note (wajib)</label>
+          <textarea id="reason" placeholder="Tulis lengkap: kenapa entry, setup, timeframe, S/R, invalidasi ide..."></textarea>
+        </div>
+
+        <div class="row" style="margin-top:10px;justify-content:space-between">
+          <div class="row">
+            <button id="btnSave" class="btn good">Save Trade</button>
+            <button id="btnReset" class="btn">Reset</button>
+          </div>
+
+          <div class="row">
+            <button id="btnExport" class="btn">Export JSON</button>
+            <label class="btn" style="display:inline-flex;align-items:center;gap:8px">
+              Import JSON
+              <input id="fileImport" type="file" accept="application/json" style="display:none"/>
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-top:8px" class="muted">
+          * Offline: data tersimpan di device. Kalau login, data auto sync lintas device + tetap kebackup lokal.
+        </div>
+      </div>
+
+      <div class="card" style="width:340px;min-width:300px">
+        <h2>QUICK CHECK (biar kebiasaan)</h2>
+        <div class="grid">
+          <div class="pill"><b>Entry</b> <span id="qcEntry">-</span></div>
+          <div class="pill"><b>Margin</b> <span id="qcMargin">-</span> USDT</div>
+          <div class="pill"><b>Leverage</b> <span id="qcLev">-</span>x</div>
+          <div class="pill"><b>Position size</b> <span id="qcPos">-</span> USDT</div>
+          <div class="pill"><b>SL</b> <span id="qcSl">-</span></div>
+          <div class="pill"><b>TP</b> <span id="qcTp">-</span></div>
+          <div class="pill"><b>Estimasi SL PnL</b> <span class="tr-bad" id="qcSlPnl">-</span></div>
+          <div class="pill"><b>Estimasi TP PnL</b> <span class="tr-good" id="qcTpPnl">-</span></div>
+          <div class="muted" style="font-size:12px;line-height:1.5">
+            Target web ini: sebelum entry lu langsung “kebayang” <b>SL 0.3%</b> itu sebenarnya berapa % margin pada leverage lu.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:12px"></div>
+
+    <div class="card">
+      <h2>TRADE LOG</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Pair</th>
+              <th>Side</th>
+              <th>Entry</th>
+              <th>SL (price / %)</th>
+              <th>TP (price / %)</th>
+              <th>Lev</th>
+              <th>Margin</th>
+              <th>Pos size</th>
+              <th>SL impact</th>
+              <th>TP impact</th>
+              <th>Result</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tradeTbody"></tbody>
+        </table>
+      </div>
+
+      <div class="muted" style="margin-top:10px;font-size:12px">
+        Tip: klik Benar/Salah setelah trade selesai biar statistik beneran ngukur akurasi analisis.
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">
+    <div id="toastMsg">-</div>
+    <button class="btn sm" onclick="document.getElementById('toast').style.display='none'">OK</button>
+  </div>
+
+  <!-- LocalForage (IndexedDB wrapper) -->
+  <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
+
+  <script type="module">
+    /*****************************************************************
+     * 0) UTIL / CALC (sesuai rumus yang lu minta)
+     *****************************************************************/
+    const toNum = (v) => {
+      const n = typeof v === "number" ? v : parseFloat(String(v).replace(",", "."));
+      return Number.isFinite(n) ? n : 0;
+    };
+    const clampNum = (n, min = 0, max = Number.POSITIVE_INFINITY) => {
+      if (!Number.isFinite(n)) return 0;
+      return Math.min(max, Math.max(min, n));
+    };
+    const fmt = (n, d = 2) => toNum(n).toLocaleString(undefined, { maximumFractionDigits:d, minimumFractionDigits:d });
+
+    // position_size = margin × leverage
+    const positionSize = (margin, lev) => toNum(margin) * toNum(lev);
+
+    // margin_impact_% = price_move_% × leverage (price_move_%: misal 0.3 artinya 0.3%)
+    const impactPercent = (priceMovePct, lev) => toNum(priceMovePct) * toNum(lev);
+
+    // SL/TP conversions
+    const slPriceFromPct = (side, entry, slPct) => {
+      const e = toNum(entry), p = toNum(slPct)/100;
+      if (side === "SHORT") return e * (1 + p);
+      return e * (1 - p);
+    };
+    const tpPriceFromPct = (side, entry, tpPct) => {
+      const e = toNum(entry), p = toNum(tpPct)/100;
+      if (side === "SHORT") return e * (1 - p);
+      return e * (1 + p);
+    };
+    const slPctFromPrice = (side, entry, slPrice) => {
+      const e = toNum(entry), s = toNum(slPrice);
+      if (e <= 0) return 0;
+      let frac = 0;
+      if (side === "SHORT") frac = (s - e) / e;
+      else frac = (e - s) / e;
+      return clampNum(frac * 100, 0, 1000);
+    };
+    const tpPctFromPrice = (side, entry, tpPrice) => {
+      const e = toNum(entry), t = toNum(tpPrice);
+      if (e <= 0) return 0;
+      let frac = 0;
+      if (side === "SHORT") frac = (e - t) / e;
+      else frac = (t - e) / e;
+      return clampNum(frac * 100, 0, 1000);
+    };
+
+    const estPnlUsdtFromImpact = (margin, impactPct, isProfit) => {
+      const m = toNum(margin);
+      const pct = toNum(impactPct)/100;
+      const val = m * pct;
+      return isProfit ? val : -val;
+    };
+
+    const toast = (msg) => {
+      const el = document.getElementById("toast");
+      document.getElementById("toastMsg").innerHTML = msg;
+      el.style.display = "flex";
+    };
+
+    const statusLabel = (s) => s === "CORRECT" ? "✅ Benar" : (s === "WRONG" ? "❌ Salah" : "⬜ Pending");
+
+    const uuidv4 = () =>
+      "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+        const r = (crypto.getRandomValues(new Uint8Array(1))[0] & 15) >> 0;
+        const v = c === "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+
+    /*****************************************************************
+     * 1) OFFLINE STORAGE (IndexedDB via localForage)
+     *****************************************************************/
+    localforage.config({ name:"futures-journal", storeName:"fj_store" });
+    const LOCAL_KEY = "fj_trades_v1";
+    const loadLocalTrades = async () => {
+      const data = await localforage.getItem(LOCAL_KEY);
+      return Array.isArray(data) ? data : [];
+    };
+    const saveLocalTrades = async (trades) => localforage.setItem(LOCAL_KEY, trades);
+
+    /*****************************************************************
+     * 2) FIREBASE (Auth + Firestore) - OPTIONAL
+     *    - Kalau lu gak isi config, app tetap jalan offline.
+     *****************************************************************/
+    // ---- ISI CONFIG LU DI SINI (Firebase Console -> Project settings -> Web app config) ----
+    const firebaseConfig = {
+      apiKey: "",
+      authDomain: "",
+      projectId: "",
+      storageBucket: "",
+      messagingSenderId: "",
+      appId: "",
+    };
+    const firebaseEnabled = Object.values(firebaseConfig).every(v => String(v || "").trim().length > 0);
+
+    let fb = null;
+    let auth = null;
+    let db = null;
+    let user = null;
+    let unsubCloud = null;
+
+    // Dynamic import Firebase (biar gak error kalau config kosong)
+    if (firebaseEnabled) {
+      const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
+      const {
+        getAuth, onAuthStateChanged, GoogleAuthProvider,
+        signInWithPopup, signOut,
+        createUserWithEmailAndPassword, signInWithEmailAndPassword
+      } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js");
+      const {
+        getFirestore, collection, doc, setDoc, deleteDoc,
+        onSnapshot, getDocs, getDoc, serverTimestamp
+      } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
+
+      fb = {
+        initializeApp, getAuth, onAuthStateChanged, GoogleAuthProvider,
+        signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+        getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc, serverTimestamp
+      };
+
+      const app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      db = getFirestore(app);
+
+      const ensureUserProfile = async (uid, profile) => {
+        const ref = doc(db, "users", uid);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) {
+          await setDoc(ref, { profile, createdAt: serverTimestamp() }, { merge:true });
+        }
+      };
+
+      const userTradesCol = (uid) => collection(db, "users", uid, "trades");
+
+      const upsertTradeCloud = async (uid, trade) => {
+        const ref = doc(db, "users", uid, "trades", trade.id);
+        await setDoc(ref, {
+          ...trade,
+          updatedAt: serverTimestamp(),
+          createdAt: trade.createdAt ?? serverTimestamp(),
+        }, { merge:true });
+      };
+
+      const deleteTradeCloud = async (uid, tradeId) => {
+        const ref = doc(db, "users", uid, "trades", tradeId);
+        await deleteDoc(ref);
+      };
+
+      const mergeLocalToCloud = async (uid, localTrades) => {
+        const snap = await getDocs(userTradesCol(uid));
+        const cloudIds = new Set();
+        snap.forEach(d => cloudIds.add(d.id));
+        const toUpload = localTrades.filter(t => !cloudIds.has(t.id));
+        for (const t of toUpload) await upsertTradeCloud(uid, t);
+      };
+
+      const subscribeCloudTrades = (uid, onChange) => {
+        return onSnapshot(userTradesCol(uid), (snap) => {
+          const arr = [];
+          snap.forEach((d) => arr.push(d.data()));
+          arr.sort((a,b) => (b.datetimeLocal || "").localeCompare(a.datetimeLocal || ""));
+          onChange(arr);
+        });
+      };
+
+      // expose for later
+      fb.helpers = { ensureUserProfile, upsertTradeCloud, deleteTradeCloud, mergeLocalToCloud, subscribeCloudTrades };
+
+      // auth listener
+      fb.onAuthStateChanged(auth, async (u) => {
+        user = u || null;
+        renderAuth();
+        if (unsubCloud) { unsubCloud(); unsubCloud = null; }
+
+        if (!user) {
+          // local-only
+          trades = await loadLocalTrades();
+          renderAll();
+          return;
+        }
+
+        await ensureUserProfile(user.uid, {
+          email: user.email || "",
+          name: user.displayName || "",
+        });
+
+        // merge local -> cloud
+        const local = await loadLocalTrades();
+        if (local.length) await mergeLocalToCloud(user.uid, local);
+
+        // subscribe cloud
+        unsubCloud = subscribeCloudTrades(user.uid, async (cloudTrades) => {
+          trades = cloudTrades;
+          await saveLocalTrades(trades);
+          renderAll();
+        });
+      });
+
+      // attach to window for handlers
+      window.__fb = {
+        auth, db,
+        GoogleAuthProvider,
+        signInWithPopup, signOut,
+        createUserWithEmailAndPassword, signInWithEmailAndPassword,
+        ...fb.helpers
+      };
+    } else {
+      toast(`<b>Mode OFFLINE</b> aktif. Isi Firebase config kalau mau login & sync lintas device.`);
+    }
+
+    /*****************************************************************
+     * 3) STATE
+     *****************************************************************/
+    let trades = await loadLocalTrades();
+
+    const emptyDraft = () => ({
+      id: uuidv4(),
+      datetimeLocal: new Date().toISOString().slice(0,16),
+      pair: "BTCUSDT",
+      side: "LONG",
+      entry: "",
+      margin: "",
+      leverage: 20,
+      slMode: "PCT", // PCT | PRICE
+      tpMode: "PCT",
+      slPct: "0.3",
+      tpPct: "1.2",
+      slPrice: "",
+      tpPrice: "",
+      reason: "",
+      status: "PENDING",
+      createdAt: null,
+    });
+
+    let draft = emptyDraft();
+    let editingId = null;
+
+    /*****************************************************************
+     * 4) DOM refs
+     *****************************************************************/
+    const $ = (id) => document.getElementById(id);
+
+    const elAuthArea = $("authArea");
+    const elStats = $("statsPills");
+    const elTbody = $("tradeTbody");
+
+    const inputs = {
+      datetimeLocal: $("datetimeLocal"),
+      pair: $("pair"),
+      side: $("side"),
+      entry: $("entry"),
+      margin: $("margin"),
+      leverage: $("leverage"),
+      slMode: $("slMode"),
+      slValue: $("slValue"),
+      tpMode: $("tpMode"),
+      tpValue: $("tpValue"),
+      reason: $("reason"),
+    };
+
+    /*****************************************************************
+     * 5) COMPUTE draft realtime
+     *****************************************************************/
+    const computeDraft = () => {
+      const side = draft.side;
+      const entry = toNum(draft.entry);
+      const margin = toNum(draft.margin);
+      const lev = toNum(draft.leverage);
+
+      // SL
+      let slPct = toNum(draft.slPct);
+      let slPrice = toNum(draft.slPrice);
+      if (draft.slMode === "PCT") {
+        slPrice = entry > 0 ? slPriceFromPct(side, entry, slPct) : 0;
+      } else {
+        slPct = entry > 0 ? slPctFromPrice(side, entry, slPrice) : 0;
+      }
+
+      // TP
+      let tpPct = toNum(draft.tpPct);
+      let tpPrice = toNum(draft.tpPrice);
+      if (draft.tpMode === "PCT") {
+        tpPrice = entry > 0 ? tpPriceFromPct(side, entry, tpPct) : 0;
+      } else {
+        tpPct = entry > 0 ? tpPctFromPrice(side, entry, tpPrice) : 0;
+      }
+
+      const posSize = positionSize(margin, lev);
+      const slImpact = impactPercent(slPct, lev);
+      const tpImpact = impactPercent(tpPct, lev);
+      const slPnl = estPnlUsdtFromImpact(margin, slImpact, false);
+      const tpPnl = estPnlUsdtFromImpact(margin, tpImpact, true);
+
+      return { entry, margin, lev, slPct, slPrice, tpPct, tpPrice, posSize, slImpact, tpImpact, slPnl, tpPnl };
+    };
+
+    /*****************************************************************
+     * 6) RENDER
+     *****************************************************************/
+    const renderAuth = () => {
+      const fbOk = firebaseEnabled && window.__fb;
+      if (!fbOk) {
+        elAuthArea.innerHTML = `
+          <div class="pill">Cloud sync: <b class="tr-pending">OFF</b></div>
+          <div class="pill">Mode: <b>OFFLINE</b></div>
+        `;
+        return;
+      }
+
+      if (!user) {
+        elAuthArea.innerHTML = `
+          <button class="btn" id="btnGoogle">Login Google</button>
+          <div class="row" style="gap:8px">
+            <input id="authEmail" style="width:180px" placeholder="email"/>
+            <input id="authPass" style="width:140px" placeholder="password" type="password"/>
+            <button class="btn sm" id="btnEmailLogin">Login</button>
+            <button class="btn sm" id="btnEmailReg">Daftar</button>
+          </div>
+        `;
+
+        $("btnGoogle").onclick = async () => {
+          try {
+            const { GoogleAuthProvider, signInWithPopup, auth } = window.__fb;
+            await signInWithPopup(auth, new GoogleAuthProvider());
+          } catch (e) {
+            toast(`<b>Login gagal</b><br/>${e.message}`);
+          }
+        };
+
+        $("btnEmailLogin").onclick = async () => {
+          try {
+            const email = $("authEmail").value.trim();
+            const pass = $("authPass").value.trim();
+            const { signInWithEmailAndPassword, auth } = window.__fb;
+            await signInWithEmailAndPassword(auth, email, pass);
+          } catch (e) {
+            toast(`<b>Login gagal</b><br/>${e.message}`);
+          }
+        };
+
+        $("btnEmailReg").onclick = async () => {
+          try {
+            const email = $("authEmail").value.trim();
+            const pass = $("authPass").value.trim();
+            const { createUserWithEmailAndPassword, auth } = window.__fb;
+            await createUserWithEmailAndPassword(auth, email, pass);
+          } catch (e) {
+            toast(`<b>Daftar gagal</b><br/>${e.message}`);
+          }
+        };
+
+      } else {
+        elAuthArea.innerHTML = `
+          <div class="pill">Login: <b>${user.email || user.displayName}</b></div>
+          <div class="pill">Cloud sync: <b class="tr-good">ON</b></div>
+          <button class="btn" id="btnLogout">Logout</button>
+        `;
+        $("btnLogout").onclick = async () => {
+          try {
+            const { signOut, auth } = window.__fb;
+            await signOut(auth);
+          } catch (e) {
+            toast(`<b>Logout gagal</b><br/>${e.message}`);
+          }
+        };
+      }
+    };
+
+    const renderStats = () => {
+      const total = trades.length;
+      const decided = trades.filter(t => t.status === "CORRECT" || t.status === "WRONG");
+      const correct = decided.filter(t => t.status === "CORRECT").length;
+      const wrong = decided.filter(t => t.status === "WRONG").length;
+      const winRate = decided.length ? (correct/decided.length)*100 : 0;
+
+      const avgProfit = (() => {
+        const wins = decided.filter(t => t.status === "CORRECT");
+        if (!wins.length) return 0;
+        return wins.reduce((a,t) => a + toNum(t.tpImpact), 0) / wins.length;
+      })();
+
+      const avgLoss = (() => {
+        const losses = decided.filter(t => t.status === "WRONG");
+        if (!losses.length) return 0;
+        return losses.reduce((a,t) => a + toNum(t.slImpact), 0) / losses.length;
+      })();
+
+      const rr = avgLoss > 0 ? avgProfit/avgLoss : 0;
+
+      elStats.innerHTML = `
+        <div class="pill"><b>Total</b> ${total}</div>
+        <div class="pill"><b>Benar</b> ${correct}</div>
+        <div class="pill"><b>Salah</b> ${wrong}</div>
+        <div class="pill"><b>Win rate</b> ${fmt(winRate,1)}%</div>
+        <div class="pill"><b>Avg profit</b> ${fmt(avgProfit,1)}% margin</div>
+        <div class="pill"><b>Avg loss</b> ${fmt(avgLoss,1)}% margin</div>
+        <div class="pill"><b>Avg RR</b> ${fmt(rr,2)}</div>
+      `;
+    };
+
+    const renderDraft = () => {
+      const c = computeDraft();
+
+      $("slMovePct").textContent = fmt(c.slPct, 3);
+      $("slImpactPct").textContent = fmt(c.slImpact, 2);
+      $("slPriceAuto").textContent = fmt(c.slPrice, 2);
+      $("slPnlAuto").textContent = fmt(c.slPnl, 2);
+
+      $("tpMovePct").textContent = fmt(c.tpPct, 3);
+      $("tpImpactPct").textContent = fmt(c.tpImpact, 2);
+      $("tpPriceAuto").textContent = fmt(c.tpPrice, 2);
+      $("tpPnlAuto").textContent = fmt(c.tpPnl, 2);
+
+      $("posSizeAuto").textContent = `${fmt(c.posSize, 2)} USDT`;
+      $("impactLine").textContent = `SL ${fmt(c.slPct,3)}% → ${fmt(c.slImpact,2)}% | TP ${fmt(c.tpPct,3)}% → ${fmt(c.tpImpact,2)}%`;
+
+      // Quick check
+      $("qcEntry").textContent = c.entry ? fmt(c.entry,2) : "-";
+      $("qcMargin").textContent = c.margin ? fmt(c.margin,2) : "-";
+      $("qcLev").textContent = c.lev ? fmt(c.lev,0) : "-";
+      $("qcPos").textContent = c.posSize ? fmt(c.posSize,2) : "-";
+      $("qcSl").textContent = `${fmt(c.slPct,3)}% → ${fmt(c.slImpact,2)}% margin`;
+      $("qcTp").textContent = `${fmt(c.tpPct,3)}% → ${fmt(c.tpImpact,2)}% margin`;
+      $("qcSlPnl").textContent = `${fmt(c.slPnl,2)} USDT`;
+      $("qcTpPnl").textContent = `${fmt(c.tpPnl,2)} USDT`;
+    };
+
+    const renderTable = () => {
+      if (!trades.length) {
+        elTbody.innerHTML = `<tr><td class="muted" colspan="13">Belum ada trade.</td></tr>`;
+        return;
+      }
+
+      elTbody.innerHTML = trades.map(t => {
+        const pos = t.positionSize ?? (toNum(t.margin)*toNum(t.leverage));
+        const slImp = t.slImpact ?? impactPercent(t.slPct, t.leverage);
+        const tpImp = t.tpImpact ?? impactPercent(t.tpPct, t.leverage);
+
+        const statusClass = t.status === "CORRECT" ? "tr-good" : (t.status === "WRONG" ? "tr-bad" : "tr-pending");
+
+        return `
+          <tr>
+            <td class="muted">${String(t.datetimeLocal || "").replace("T"," ")}</td>
+            <td><b>${t.pair || ""}</b></td>
+            <td>${t.side || ""}</td>
+            <td>${fmt(t.entry,2)}</td>
+            <td>${fmt(t.slPrice,2)} / ${fmt(t.slPct,3)}%</td>
+            <td>${fmt(t.tpPrice,2)} / ${fmt(t.tpPct,3)}%</td>
+            <td>${fmt(t.leverage,0)}x</td>
+            <td>${fmt(t.margin,2)}</td>
+            <td>${fmt(pos,2)}</td>
+            <td class="tr-bad">${fmt(slImp,2)}%</td>
+            <td class="tr-good">${fmt(tpImp,2)}%</td>
+            <td class="${statusClass}">${statusLabel(t.status)}</td>
+            <td>
+              <div class="row" style="gap:8px">
+                <button class="btn sm good" data-act="correct" data-id="${t.id}">Benar</button>
+                <button class="btn sm bad" data-act="wrong" data-id="${t.id}">Salah</button>
+                <button class="btn sm" data-act="edit" data-id="${t.id}">Edit</button>
+                <button class="btn sm" data-act="del" data-id="${t.id}">Delete</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      // actions
+      elTbody.querySelectorAll("button[data-act]").forEach(btn => {
+        btn.onclick = async () => {
+          const act = btn.getAttribute("data-act");
+          const id = btn.getAttribute("data-id");
+          const t = trades.find(x => x.id === id);
+          if (!t) return;
+
+          if (act === "edit") {
+            editingId = id;
+            draft = {
+              ...t,
+              slMode: t.slMode || "PCT",
+              tpMode: t.tpMode || "PCT",
+            };
+            setFormFromDraft();
+            $("formTitle").textContent = "EDIT TRADE";
+            $("btnSave").textContent = "Update Trade";
+            toast(`<b>Edit mode</b> aktif. Ubah data lalu klik Update.`);
+            return;
+          }
+
+          if (act === "del") {
+            trades = trades.filter(x => x.id !== id);
+            await saveLocalTrades(trades);
+            renderAll();
+            if (firebaseEnabled && user && window.__fb) {
+              try { await window.__fb.deleteTradeCloud(user.uid, id); } catch(e){}
+            }
+            return;
+          }
+
+          if (act === "correct" || act === "wrong") {
+            const status = act === "correct" ? "CORRECT" : "WRONG";
+            trades = trades.map(x => x.id === id ? ({ ...x, status }) : x);
+            await saveLocalTrades(trades);
+            renderAll();
+            if (firebaseEnabled && user && window.__fb) {
+              try { await window.__fb.upsertTradeCloud(user.uid, { ...t, status }); } catch(e){}
+            }
+            return;
+          }
+        };
+      });
+    };
+
+    const renderAll = () => {
+      renderAuth();
+      renderStats();
+      renderDraft();
+      renderTable();
+    };
+
+    /*****************************************************************
+     * 7) FORM binding
+     *****************************************************************/
+    const setFormFromDraft = () => {
+      inputs.datetimeLocal.value = draft.datetimeLocal || "";
+      inputs.pair.value = (draft.pair || "").toUpperCase();
+      inputs.side.value = draft.side || "LONG";
+      inputs.entry.value = draft.entry ?? "";
+      inputs.margin.value = draft.margin ?? "";
+      inputs.leverage.value = draft.leverage ?? 20;
+
+      inputs.slMode.value = draft.slMode || "PCT";
+      inputs.tpMode.value = draft.tpMode || "PCT";
+
+      // label + value sesuai mode
+      const slIsPct = inputs.slMode.value === "PCT";
+      $("slLabel").textContent = slIsPct ? "SL %" : "SL price";
+      inputs.slValue.value = slIsPct ? (draft.slPct ?? "0.3") : (draft.slPrice ?? "");
+
+      const tpIsPct = inputs.tpMode.value === "PCT";
+      $("tpLabel").textContent = tpIsPct ? "TP %" : "TP price";
+      inputs.tpValue.value = tpIsPct ? (draft.tpPct ?? "1.2") : (draft.tpPrice ?? "");
+
+      inputs.reason.value = draft.reason ?? "";
+      renderDraft();
+    };
+
+    const pullDraftFromForm = () => {
+      draft.datetimeLocal = inputs.datetimeLocal.value;
+      draft.pair = (inputs.pair.value || "").toUpperCase();
+      draft.side = inputs.side.value;
+      draft.entry = inputs.entry.value;
+      draft.margin = inputs.margin.value;
+      draft.leverage = inputs.leverage.value;
+
+      draft.slMode = inputs.slMode.value;
+      draft.tpMode = inputs.tpMode.value;
+
+      if (draft.slMode === "PCT") draft.slPct = inputs.slValue.value;
+      else draft.slPrice = inputs.slValue.value;
+
+      if (draft.tpMode === "PCT") draft.tpPct = inputs.tpValue.value;
+      else draft.tpPrice = inputs.tpValue.value;
+
+      draft.reason = inputs.reason.value;
+    };
+
+    // realtime listeners
+    ["input","change"].forEach(evt => {
+      Object.values(inputs).forEach(el => el.addEventListener(evt, () => {
+        pullDraftFromForm();
+
+        // when switching mode: sync the value so it doesn't jump
+        if (el === inputs.slMode) {
+          const c = computeDraft();
+          const slIsPct = inputs.slMode.value === "PCT";
+          $("slLabel").textContent = slIsPct ? "SL %" : "SL price";
+          inputs.slValue.value = slIsPct ? String(c.slPct) : String(c.slPrice);
+          draft.slPct = String(c.slPct);
+          draft.slPrice = String(c.slPrice);
+        }
+
+        if (el === inputs.tpMode) {
+          const c = computeDraft();
+          const tpIsPct = inputs.tpMode.value === "PCT";
+          $("tpLabel").textContent = tpIsPct ? "TP %" : "TP price";
+          inputs.tpValue.value = tpIsPct ? String(c.tpPct) : String(c.tpPrice);
+          draft.tpPct = String(c.tpPct);
+          draft.tpPrice = String(c.tpPrice);
+        }
+
+        renderDraft();
+      }));
+    });
+
+    /*****************************************************************
+     * 8) SAVE / RESET / EXPORT / IMPORT
+     *****************************************************************/
+    $("btnSave").onclick = async () => {
+      pullDraftFromForm();
+
+      // minimal validation
+      if (!draft.datetimeLocal || !draft.pair || !draft.side) {
+        toast("<b>Isi date/pair/side</b> dulu bro.");
+        return;
+      }
+      if (toNum(draft.entry) <= 0 || toNum(draft.margin) <= 0 || toNum(draft.leverage) <= 0) {
+        toast("<b>Entry/Margin/Leverage</b> harus > 0.");
+        return;
+      }
+      if (!String(draft.reason || "").trim()) {
+        toast("<b>Reason wajib</b> — tulis alasan entry + invalidasi ide.");
+        return;
+      }
+
+      const c = computeDraft();
+      const normalized = {
+        ...draft,
+        slPct: String(c.slPct),
+        slPrice: String(c.slPrice),
+        tpPct: String(c.tpPct),
+        tpPrice: String(c.tpPrice),
+        positionSize: c.posSize,
+        slImpact: c.slImpact,
+        tpImpact: c.tpImpact,
+        slPnl: c.slPnl,
+        tpPnl: c.tpPnl,
+      };
+
+      if (editingId) {
+        trades = trades.map(t => t.id === editingId ? normalized : t);
+      } else {
+        trades = [normalized, ...trades];
+      }
+
+      // persist local
+      await saveLocalTrades(trades);
+
+      // persist cloud if logged in
+      if (firebaseEnabled && user && window.__fb) {
+        try { await window.__fb.upsertTradeCloud(user.uid, normalized); } catch(e){}
+      }
+
+      // reset
+      editingId = null;
+      draft = emptyDraft();
+      setFormFromDraft();
+      $("formTitle").textContent = "SETUP TRADE";
+      $("btnSave").textContent = "Save Trade";
+
+      renderAll();
+      toast("<b>Saved.</b> Trade masuk journal.");
+    };
+
+    $("btnReset").onclick = () => {
+      editingId = null;
+      draft = emptyDraft();
+      setFormFromDraft();
+      $("formTitle").textContent = "SETUP TRADE";
+      $("btnSave").textContent = "Save Trade";
+      toast("Form di-reset.");
+    };
+
+    $("btnExport").onclick = () => {
+      const blob = new Blob([JSON.stringify(trades, null, 2)], { type:"application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `futures-journal-backup-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    $("fileImport").onchange = async (e) => {
+      const f = e.target.files?.[0];
+      e.target.value = "";
+      if (!f) return;
+
+      try {
+        const text = await f.text();
+        const incoming = JSON.parse(text);
+        if (!Array.isArray(incoming)) throw new Error("JSON harus array trades");
+
+        // merge by id (incoming wins)
+        const map = new Map(trades.map(t => [t.id, t]));
+        for (const t of incoming) if (t && t.id) map.set(t.id, t);
+
+        trades = Array.from(map.values()).sort((a,b) => (b.datetimeLocal || "").localeCompare(a.datetimeLocal || ""));
+        await saveLocalTrades(trades);
+
+        // upload all if login
+        if (firebaseEnabled && user && window.__fb) {
+          for (const t of trades) {
+            try { await window.__fb.upsertTradeCloud(user.uid, t); } catch(e){}
+          }
+        }
+
+        renderAll();
+        toast("<b>Import sukses.</b> Data sudah masuk.");
+      } catch (err) {
+        toast(`<b>Import gagal</b><br/>${err.message}`);
+      }
+    };
+
+    /*****************************************************************
+     * 9) INIT
+     *****************************************************************/
+    setFormFromDraft();
+    renderAll();
+  </script>
+</body>
+</html>
